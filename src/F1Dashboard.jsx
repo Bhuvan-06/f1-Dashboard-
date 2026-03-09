@@ -4303,11 +4303,12 @@ const TABS = [
   { id: "models",    label: "🧠 ML Models"   },
 ];
 
-export default function App() {
-  const [tab,      setTab]      = useState("oracle");
-  const [selected, setSelected] = useState(["VER", "NOR", "LEC", "HAM", "SAI", "RUS"]);
-  const [season,   setSeason]   = useState("All");
-  const [loaded,   setLoaded]   = useState(false);
+export default function App({ user, onLogout }) {
+  const [tab,         setTab]         = useState("oracle");
+  const [selected,    setSelected]    = useState(["VER", "NOR", "LEC", "HAM", "SAI", "RUS"]);
+  const [season,      setSeason]      = useState("All");
+  const [loaded,      setLoaded]      = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const [eggDRS,    setEggDRS]    = useState(false);
   const [eggSenna,  setEggSenna]  = useState(false);
@@ -4389,7 +4390,7 @@ export default function App() {
               ))}
             </nav>
 
-            {/* Status */}
+            {/* Status + Profile */}
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
               <div style={{ background: C.s1, border: `1px solid ${C.border}`, borderRadius: 8, padding: "4px 10px", fontSize: 10, color: C.gold, fontFamily: C.mono }}>
                 {season === "All" ? "2019–2025" : season}
@@ -4401,6 +4402,125 @@ export default function App() {
                 <div style={{ width: 7, height: 7, background: C.green, borderRadius: "50%", boxShadow: `0 0 8px ${C.green}`, animation: "pulse 2s ease infinite" }} />
                 <span style={{ fontSize: 9, color: C.green, fontFamily: C.mono }}>LIVE</span>
               </div>
+
+              {/* ── User Profile ── */}
+              {user && (
+                <div style={{ position: "relative", marginLeft: 4 }}>
+                  <button
+                    onClick={() => setProfileOpen(o => !o)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      background: profileOpen ? C.s2 : C.s1,
+                      border: `1px solid ${profileOpen ? C.borderHi : C.border}`,
+                      borderRadius: 10, padding: "5px 10px 5px 6px",
+                      cursor: "pointer", transition: "all .15s",
+                    }}>
+                    {/* Avatar */}
+                    <div style={{
+                      width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+                      background: user.isGuest
+                        ? `linear-gradient(135deg, ${C.muted}, #555)`
+                        : `linear-gradient(135deg, ${C.red}, #a0001f)`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 10, fontWeight: 800, color: "#fff", fontFamily: C.disp,
+                      boxShadow: user.isGuest ? "none" : `0 0 10px ${C.red}55`,
+                    }}>
+                      {user.isGuest ? "G" : user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: 11, color: C.text, fontFamily: C.mono, maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {user.isGuest ? "GUEST" : user.name.split(" ")[0].toUpperCase()}
+                    </span>
+                    <span style={{ fontSize: 9, color: C.muted, marginLeft: -2 }}>▾</span>
+                  </button>
+
+                  {/* Dropdown */}
+                  {profileOpen && (
+                    <>
+                      {/* Backdrop */}
+                      <div style={{ position: "fixed", inset: 0, zIndex: 198 }} onClick={() => setProfileOpen(false)} />
+                      <div style={{
+                        position: "absolute", right: 0, top: "calc(100% + 8px)",
+                        background: C.card, border: `1px solid ${C.border}`,
+                        borderRadius: 16, padding: "16px 0", width: 230,
+                        boxShadow: "0 24px 60px rgba(0,0,0,.65)",
+                        zIndex: 199, animation: "fadeUp .2s ease",
+                      }}>
+                        {/* User info */}
+                        <div style={{ padding: "6px 18px 16px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                            <div style={{
+                              width: 40, height: 40, borderRadius: "50%",
+                              background: user.isGuest
+                                ? `linear-gradient(135deg, ${C.muted}, #555)`
+                                : `linear-gradient(135deg, ${C.red}, #a0001f)`,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 16, fontWeight: 800, color: "#fff", fontFamily: C.disp,
+                              boxShadow: user.isGuest ? "none" : `0 0 16px ${C.red}44`,
+                            }}>
+                              {user.isGuest ? "G" : user.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: C.fn }}>{user.name}</p>
+                              <p style={{ fontSize: 10, color: C.dim, fontFamily: C.mono, marginTop: 2 }}>
+                                {user.email || "Guest session"}
+                              </p>
+                            </div>
+                          </div>
+                          {user.isGuest && (
+                            <div style={{
+                              background: `${C.gold}10`, border: `1px solid ${C.gold}28`,
+                              borderRadius: 8, padding: "7px 10px", fontSize: 10, color: C.gold, fontFamily: C.mono,
+                            }}>
+                              ⚡ Sign in to save your progress
+                            </div>
+                          )}
+                          {user.isDemo && (
+                            <div style={{
+                              background: `${C.violet}10`, border: `1px solid ${C.violet}28`,
+                              borderRadius: 8, padding: "7px 10px", fontSize: 10, color: C.violet, fontFamily: C.mono,
+                            }}>
+                              ◈ Demo account active
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ height: 1, background: C.border, margin: "0 0 8px" }} />
+
+                        {/* Menu items */}
+                        {[
+                          { icon: "🏎", label: "Driver Hub",  action: () => { setTab("hub"); setProfileOpen(false); } },
+                          { icon: "🏆", label: "Standings",   action: () => { setTab("standings"); setProfileOpen(false); } },
+                          { icon: "🎮", label: "Games",       action: () => { setTab("games"); setProfileOpen(false); } },
+                        ].map(item => (
+                          <button key={item.label} onClick={item.action} style={{
+                            width: "100%", padding: "9px 18px", background: "none", border: "none",
+                            display: "flex", alignItems: "center", gap: 10,
+                            color: C.dim, fontSize: 12, fontFamily: C.fn, cursor: "pointer",
+                            textAlign: "left", transition: "background .15s, color .15s",
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = C.s1; e.currentTarget.style.color = C.text; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = C.dim; }}>
+                            <span style={{ fontSize: 14 }}>{item.icon}</span> {item.label}
+                          </button>
+                        ))}
+
+                        <div style={{ height: 1, background: C.border, margin: "8px 0" }} />
+
+                        <button onClick={() => { setProfileOpen(false); onLogout(); }} style={{
+                          width: "100%", padding: "9px 18px", background: "none", border: "none",
+                          display: "flex", alignItems: "center", gap: 10,
+                          color: C.red, fontSize: 12, fontFamily: C.fn, cursor: "pointer",
+                          textAlign: "left", transition: "background .15s",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = `${C.red}0e`}
+                        onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                          <span style={{ fontSize: 14 }}>🚪</span> Sign Out
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </header>
