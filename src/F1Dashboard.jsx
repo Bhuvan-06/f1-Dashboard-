@@ -474,10 +474,45 @@ const HELMET_DESIGNS = {
          motif:"curve" },
 };
 
-/* DriverPhoto — pure inline SVG helmet portrait, no external deps */
+/* ─────────────────────────────────────────────────────────────
+   OFFICIAL F1 DRIVER PHOTOS  (Formula 1 CDN · 2026 season)
+   Falls back to SVG helmet for retired / missing drivers.
+───────────────────────────────────────────────────────────── */
+const F1_CDN = (team, slug) =>
+  `https://media.formula1.com/image/upload/c_lfill,w_220/q_auto/d_common:f1:2026:fallback:driver:2026fallbackdriverright.webp/v1740000000/common/f1/2026/${team}/${slug}/2026${team}${slug}right.webp`;
+
+const DRIVER_IMAGES = {
+  VER: F1_CDN("redbullracing",  "maxver01"),
+  NOR: F1_CDN("mclaren",        "lannor01"),
+  LEC: F1_CDN("ferrari",        "chalec01"),
+  HAM: F1_CDN("ferrari",        "lewham01"),
+  SAI: F1_CDN("williams",       "carsai01"),
+  RUS: F1_CDN("mercedes",       "georus01"),
+  ALO: F1_CDN("astonmartin",    "feralo01"),
+  PIA: F1_CDN("mclaren",        "oscpia01"),
+  ANT: F1_CDN("mercedes",       "andant01"),
+  GAS: F1_CDN("alpine",         "piegas01"),
+  STR: F1_CDN("astonmartin",    "lanstr01"),
+  ALB: F1_CDN("williams",       "alealb01"),
+  TSU: F1_CDN("racingbulls",    "yuktsu01"),
+  OCO: F1_CDN("haasf1team",     "estoco01"),
+  HUL: F1_CDN("audi",           "nichul01"),
+  BEA: F1_CDN("haasf1team",     "olibea01"),
+  HAD: F1_CDN("redbullracing",  "isahad01"),
+  BOT: F1_CDN("cadillac",       "valbot01"),
+  // PER + MAG retired — no 2026 photo, gracefully falls back to SVG helmet
+};
+
 const DriverPhoto = ({ code, team, size = 110, tall, style: extStyle }) => {
-  const c = tc(team);
-  const h = tall ? Math.round(size * 1.35) : size;
+  const [imgErr, setImgErr] = useState(false);
+  const [imgOk,  setImgOk]  = useState(false);
+
+  const c      = tc(team);
+  const h      = tall ? Math.round(size * 1.35) : size;
+  const imgSrc = DRIVER_IMAGES[code];
+  const useImg = !!imgSrc && !imgErr;
+
+  /* ── SVG helmet data (used as fallback) ── */
   const d = HELMET_DESIGNS[code] || {
     dome: c, visor: "#333", stripe: "#fff", accent: "#fff",
     flag: "🏁", stripes: [], motif: "line",
@@ -486,8 +521,6 @@ const DriverPhoto = ({ code, team, size = 110, tall, style: extStyle }) => {
   const num  = drvr?.num ?? "?";
   const gid  = `hg_${code}`;
   const vid  = `vg_${code}`;
-
-  /* Motif path inside visor area */
   const motifPath = {
     angular: "M 20,60 L 35,50 L 50,58 L 65,50 L 80,60",
     curve:   "M 20,62 Q 50,48 80,62",
@@ -501,90 +534,92 @@ const DriverPhoto = ({ code, team, size = 110, tall, style: extStyle }) => {
     <div style={{
       width: size, height: h, flexShrink: 0, position: "relative",
       borderRadius: 14, overflow: "hidden",
-      background: `linear-gradient(175deg, ${c}22 0%, ${C.s1} 80%)`,
-      border: `1px solid ${c}33`,
+      background: `linear-gradient(175deg, ${c}33 0%, ${C.s0} 55%, ${C.s1} 100%)`,
+      border: `1px solid ${c}44`,
       ...extStyle,
     }}>
-      <svg viewBox="0 0 100 135" width={size} height={h}
-        style={{ position: "absolute", inset: 0, display: "block" }}>
-        <defs>
-          {/* Helmet dome gradient */}
-          <radialGradient id={gid} cx="38%" cy="32%" r="62%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.22" />
-            <stop offset="40%" stopColor={d.dome} stopOpacity="0.95" />
-            <stop offset="100%" stopColor={d.dome} stopOpacity="1" />
-          </radialGradient>
-          {/* Visor reflection */}
-          <radialGradient id={vid} cx="35%" cy="30%" r="55%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.35" />
-            <stop offset="100%" stopColor={d.visor} stopOpacity="0.7" />
-          </radialGradient>
-          <filter id={`shadow_${code}`} x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor={d.dome} floodOpacity="0.5"/>
-          </filter>
-        </defs>
 
-        {/* ── Neck / base ── */}
-        <path d="M 32,105 Q 50,115 68,105 L 65,95 Q 50,100 35,95 Z"
-          fill={d.dome} opacity="0.7" />
-
-        {/* ── Helmet dome ── */}
-        <ellipse cx="50" cy="58" rx="35" ry="42"
-          fill={`url(#${gid})`}
-          filter={`url(#shadow_${code})`} />
-
-        {/* ── Dome highlight (gloss) ── */}
-        <ellipse cx="40" cy="38" rx="14" ry="10"
-          fill="white" opacity="0.08" transform="rotate(-15,40,38)" />
-
-        {/* ── Livery stripes ── */}
-        {d.stripes.map((s, i) => (
-          <rect key={i} x={s.x} y={s.y} width={s.w} height={s.h} rx={s.rx}
-            fill={s.c} opacity="0.75"
-            clipPath={`inset(0 round 3px)`}
+      {useImg ? (
+        <>
+          {/* Real photo */}
+          <img
+            src={imgSrc}
+            alt={code}
+            onLoad={() => setImgOk(true)}
+            onError={() => setImgErr(true)}
+            style={{
+              position: "absolute",
+              bottom: 0, left: "50%",
+              transform: "translateX(-50%)",
+              height: "108%", width: "auto",
+              objectFit: "contain",
+              objectPosition: "center bottom",
+              opacity: imgOk ? 1 : 0,
+              transition: "opacity .45s ease",
+            }}
           />
-        ))}
+          {/* Shimmer placeholder while loading */}
+          {!imgOk && (
+            <div style={{
+              position: "absolute", inset: 0,
+              background: `linear-gradient(135deg, ${c}18, ${C.s1}, ${c}0e)`,
+              animation: "pulse 1.4s ease infinite",
+            }} />
+          )}
+        </>
+      ) : (
+        /* ── SVG helmet fallback ── */
+        <svg viewBox="0 0 100 135" width={size} height={h}
+          style={{ position: "absolute", inset: 0, display: "block" }}>
+          <defs>
+            <radialGradient id={gid} cx="38%" cy="32%" r="62%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.22" />
+              <stop offset="40%" stopColor={d.dome} stopOpacity="0.95" />
+              <stop offset="100%" stopColor={d.dome} stopOpacity="1" />
+            </radialGradient>
+            <radialGradient id={vid} cx="35%" cy="30%" r="55%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.35" />
+              <stop offset="100%" stopColor={d.visor} stopOpacity="0.7" />
+            </radialGradient>
+            <filter id={`shadow_${code}`} x="-10%" y="-10%" width="120%" height="130%">
+              <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor={d.dome} floodOpacity="0.5"/>
+            </filter>
+          </defs>
+          <path d="M 32,105 Q 50,115 68,105 L 65,95 Q 50,100 35,95 Z" fill={d.dome} opacity="0.7" />
+          <ellipse cx="50" cy="58" rx="35" ry="42" fill={`url(#${gid})`} filter={`url(#shadow_${code})`} />
+          <ellipse cx="40" cy="38" rx="14" ry="10" fill="white" opacity="0.08" transform="rotate(-15,40,38)" />
+          {d.stripes.map((s, i) => (
+            <rect key={i} x={s.x} y={s.y} width={s.w} height={s.h} rx={s.rx} fill={s.c} opacity="0.75" />
+          ))}
+          <path d="M 22,60 Q 24,80 50,82 Q 76,80 78,60 Q 75,44 50,43 Q 25,44 22,60 Z" fill={`url(#${vid})`} opacity="0.88" />
+          <path d="M 28,60 Q 30,73 50,75 Q 70,73 72,60 Q 66,50 50,49 Q 34,50 28,60 Z" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+          <ellipse cx="42" cy="55" rx="8" ry="4" fill="white" opacity="0.08" transform="rotate(-10,42,55)" />
+          <path d={motifPath} fill="none" stroke={d.accent} strokeWidth="1.5" opacity="0.4" />
+          <path d="M 34,82 Q 50,88 66,82 L 62,90 Q 50,95 38,90 Z" fill={d.stripe} opacity="0.5" />
+          <text x="50" y="30" textAnchor="middle" fontFamily="'Orbitron',monospace" fontSize="13" fontWeight="900" fill={d.accent} opacity="0.9">{num}</text>
+          <text x="50" y="112" textAnchor="middle" fontFamily="'Orbitron',monospace" fontSize="11" fontWeight="900" fill={c} opacity="0.95" letterSpacing="2">{code}</text>
+          <text x="50" y="126" textAnchor="middle" fontFamily="system-ui" fontSize="10" opacity="0.85">{d.flag}</text>
+        </svg>
+      )}
 
-        {/* ── Visor cut ── */}
-        <path d="M 22,60 Q 24,80 50,82 Q 76,80 78,60 Q 75,44 50,43 Q 25,44 22,60 Z"
-          fill={`url(#${vid})`} opacity="0.88" />
-
-        {/* ── Visor inner reflection ── */}
-        <path d="M 28,60 Q 30,73 50,75 Q 70,73 72,60 Q 66,50 50,49 Q 34,50 28,60 Z"
-          fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
-        <ellipse cx="42" cy="55" rx="8" ry="4"
-          fill="white" opacity="0.08" transform="rotate(-10,42,55)" />
-
-        {/* ── Motif lines inside visor ── */}
-        <path d={motifPath} fill="none"
-          stroke={d.accent} strokeWidth="1.5" opacity="0.4"
-          clipPath="inset(43px 22px 18px 22px)" />
-
-        {/* ── Chin strip / air intake ── */}
-        <path d="M 34,82 Q 50,88 66,82 L 62,90 Q 50,95 38,90 Z"
-          fill={d.stripe} opacity="0.5" />
-
-        {/* ── Driver number ── */}
-        <text x="50" y="30" textAnchor="middle"
-          fontFamily="'Orbitron',monospace" fontSize="13" fontWeight="900"
-          fill={d.accent} opacity="0.9">{num}</text>
-
-        {/* ── Code at bottom ── */}
-        <text x="50" y="112" textAnchor="middle"
-          fontFamily="'Orbitron',monospace" fontSize="11" fontWeight="900"
-          fill={c} opacity="0.95" letterSpacing="2">{code}</text>
-
-        {/* ── Flag emoji ── */}
-        <text x="50" y="126" textAnchor="middle"
-          fontFamily="system-ui" fontSize="10" opacity="0.85">{d.flag}</text>
-      </svg>
-
-      {/* Bottom gradient overlay */}
+      {/* Bottom gradient + driver code label */}
       <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: "28%",
-        background: `linear-gradient(0deg, ${C.card}ee 0%, transparent 100%)`,
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        height: "38%",
+        background: `linear-gradient(0deg, ${C.card}f2 0%, ${c}18 60%, transparent 100%)`,
         pointerEvents: "none",
-      }} />
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        paddingBottom: Math.max(4, size * 0.04),
+      }}>
+        {useImg && imgOk && (
+          <span style={{
+            fontSize: Math.max(8, Math.round(size * 0.1)),
+            fontFamily: C.disp, fontWeight: 900,
+            color: c, letterSpacing: "0.12em",
+            textShadow: `0 1px 6px ${C.bg}, 0 0 12px ${c}55`,
+          }}>{code}</span>
+        )}
+      </div>
     </div>
   );
 };
