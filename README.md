@@ -6,7 +6,7 @@
 ![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat&logo=vite&logoColor=white)
 ![Claude AI](https://img.shields.io/badge/Claude-AI-D97706?style=flat&logo=anthropic&logoColor=white)
 ![Recharts](https://img.shields.io/badge/Recharts-3-22D3EE?style=flat)
-![CI](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/f1-dashboard/ci.yml?label=CI&style=flat)
+![CI](https://img.shields.io/github/actions/workflow/status/bhuvankadiyala/f1-dashboard/ci.yml?label=CI&style=flat)
 
 ---
 
@@ -20,7 +20,7 @@ Built as a portfolio project to demonstrate React architecture, data visualisati
 
 ## Live Demo
 
-🔗 **[View Live →](https://YOUR_USERNAME.github.io/f1-dashboard)**
+🔗 **[View Live →](https://bhuvankadiyala.github.io/f1-dashboard)**
 
 > Use the demo account to log in instantly:
 > **Email:** `demo@flintel.com` · **Password:** `f1demo`
@@ -67,7 +67,7 @@ F1 CDN          — official Formula 1 Cloudinary driver photos
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/f1-dashboard.git
+git clone https://github.com/bhuvankadiyala/f1-dashboard.git
 cd f1-dashboard
 
 # Install dependencies
@@ -310,7 +310,7 @@ npm install --save-dev gh-pages
 npm run deploy
 ```
 
-Live at `https://YOUR_USERNAME.github.io/f1-dashboard` within ~2 minutes.
+Live at `https://bhuvankadiyala.github.io/f1-dashboard` within ~2 minutes.
 
 ---
 
