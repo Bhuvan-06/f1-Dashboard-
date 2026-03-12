@@ -62,6 +62,7 @@ const TEAM_COLORS = {
   "McLaren": "#FF8000", "Aston Martin": "#229971", "Alpine": "#FF87BC",
   "Williams": "#64C4FF", "RB": "#6692FF", "AlphaTauri": "#6692FF",
   "Alfa Romeo": "#C92D4B", "Haas": "#B6BABD", "Sauber": "#00CF46",
+  "Racing Point": "#F596C8", "Renault": "#FFD700",
 };
 const tc = (team) => TEAM_COLORS[team] || "#888";
 
@@ -475,42 +476,92 @@ const HELMET_DESIGNS = {
 };
 
 /* ─────────────────────────────────────────────────────────────
-   OFFICIAL F1 DRIVER PHOTOS  (Formula 1 CDN · 2026 season)
-   Falls back to SVG helmet for retired / missing drivers.
+   SEASON-AWARE DRIVER PHOTOS & TEAM ASSIGNMENTS
+   The CDN serves a fallback silhouette when no specific photo
+   exists, so every URL is safe.  Unknown combos → SVG helmet.
 ───────────────────────────────────────────────────────────── */
-const F1_CDN = (team, slug) =>
-  `https://media.formula1.com/image/upload/c_lfill,w_220/q_auto/d_common:f1:2026:fallback:driver:2026fallbackdriverright.webp/v1740000000/common/f1/2026/${team}/${slug}/2026${team}${slug}right.webp`;
+const F1_CDN_YEAR = (year, team, slug) =>
+  `https://media.formula1.com/image/upload/c_lfill,w_220/q_auto/d_common:f1:${year}:fallback:driver:${year}fallbackdriverright.webp/v1740000000/common/f1/${year}/${team}/${slug}/${year}${team}${slug}right.webp`;
 
-const DRIVER_IMAGES = {
-  VER: F1_CDN("redbullracing",  "maxver01"),
-  NOR: F1_CDN("mclaren",        "lannor01"),
-  LEC: F1_CDN("ferrari",        "chalec01"),
-  HAM: F1_CDN("ferrari",        "lewham01"),
-  SAI: F1_CDN("williams",       "carsai01"),
-  RUS: F1_CDN("mercedes",       "georus01"),
-  ALO: F1_CDN("astonmartin",    "feralo01"),
-  PIA: F1_CDN("mclaren",        "oscpia01"),
-  ANT: F1_CDN("mercedes",       "andant01"),
-  GAS: F1_CDN("alpine",         "piegas01"),
-  STR: F1_CDN("astonmartin",    "lanstr01"),
-  ALB: F1_CDN("williams",       "alealb01"),
-  TSU: F1_CDN("racingbulls",    "yuktsu01"),
-  OCO: F1_CDN("haasf1team",     "estoco01"),
-  HUL: F1_CDN("audi",           "nichul01"),
-  BEA: F1_CDN("haasf1team",     "olibea01"),
-  HAD: F1_CDN("redbullracing",  "isahad01"),
-  BOT: F1_CDN("cadillac",       "valbot01"),
-  // PER + MAG retired — no 2026 photo, gracefully falls back to SVG helmet
+/* Team overrides by season — only entries that differ from the
+   driver's current `team` field in DRIVERS are needed here.   */
+const DRIVER_TEAMS_BY_YEAR = {
+  HAM: { 2019:"Mercedes", 2020:"Mercedes", 2021:"Mercedes", 2022:"Mercedes", 2023:"Mercedes", 2024:"Mercedes" },
+  SAI: { 2019:"McLaren",  2020:"McLaren",  2021:"Ferrari",  2022:"Ferrari",  2023:"Ferrari",  2024:"Ferrari"  },
+  RUS: { 2019:"Williams", 2020:"Williams", 2021:"Williams" },
+  ALO: { 2021:"Alpine",   2022:"Alpine" },
+  PER: { 2019:"Racing Point", 2020:"Racing Point" },
+  STR: { 2019:"Racing Point", 2020:"Racing Point" },
+  GAS: { 2019:"AlphaTauri", 2020:"AlphaTauri", 2021:"AlphaTauri", 2022:"AlphaTauri" },
+  ALB: { 2019:"Red Bull", 2020:"Red Bull" },
+  OCO: { 2019:"Alpine", 2020:"Alpine", 2021:"Alpine", 2022:"Alpine", 2023:"Alpine", 2024:"Alpine" },
+  BOT: { 2019:"Mercedes", 2020:"Mercedes", 2021:"Mercedes", 2022:"Alfa Romeo", 2023:"Alfa Romeo" },
 };
 
-const DriverPhoto = ({ code, team, size = 110, tall, style: extStyle }) => {
+/* Returns the team a driver raced for in a given season */
+const driverSeasonTeam = (code, season) => {
+  const ov = DRIVER_TEAMS_BY_YEAR[code];
+  if (ov && season != null && ov[season]) return ov[season];
+  return DRIVERS.find(d => d.code === code)?.team ?? null;
+};
+
+/* Photo map: "CODE_TEAM" → CDN URL for that team's livery */
+const DRIVER_PHOTO_MAP = {
+  /* Single-team drivers */
+  "VER_Red Bull":     F1_CDN_YEAR(2025, "redbullracing", "maxver01"),
+  "NOR_McLaren":      F1_CDN_YEAR(2025, "mclaren",       "lannor01"),
+  "LEC_Ferrari":      F1_CDN_YEAR(2025, "ferrari",       "chalec01"),
+  "PIA_McLaren":      F1_CDN_YEAR(2025, "mclaren",       "oscpia01"),
+  "ANT_Mercedes":     F1_CDN_YEAR(2025, "mercedes",      "andant01"),
+  "STR_Aston Martin": F1_CDN_YEAR(2025, "astonmartin",   "lanstr01"),
+  "STR_Racing Point": F1_CDN_YEAR(2020, "racingpoint",   "lanstr01"),
+  "TSU_RB":           F1_CDN_YEAR(2025, "racingbulls",   "yuktsu01"),
+  "HUL_Haas":         F1_CDN_YEAR(2025, "haasf1team",    "nichul01"),
+  "MAG_Haas":         F1_CDN_YEAR(2024, "haasf1team",    "kevmag01"),
+  "BEA_Haas":         F1_CDN_YEAR(2025, "haasf1team",    "olibea01"),
+  "HAD_RB":           F1_CDN_YEAR(2025, "racingbulls",   "isahad01"),
+  /* Multi-team drivers */
+  "HAM_Mercedes":     F1_CDN_YEAR(2024, "mercedes",      "lewham01"),
+  "HAM_Ferrari":      F1_CDN_YEAR(2025, "ferrari",       "lewham01"),
+  "SAI_McLaren":      F1_CDN_YEAR(2020, "mclaren",       "carsai01"),
+  "SAI_Ferrari":      F1_CDN_YEAR(2024, "ferrari",       "carsai01"),
+  "SAI_Williams":     F1_CDN_YEAR(2025, "williams",      "carsai01"),
+  "RUS_Williams":     F1_CDN_YEAR(2021, "williams",      "georus01"),
+  "RUS_Mercedes":     F1_CDN_YEAR(2025, "mercedes",      "georus01"),
+  "ALO_Alpine":       F1_CDN_YEAR(2022, "alpine",        "feralo01"),
+  "ALO_Aston Martin": F1_CDN_YEAR(2025, "astonmartin",   "feralo01"),
+  "PER_Racing Point": F1_CDN_YEAR(2020, "racingpoint",   "serper01"),
+  "PER_Red Bull":     F1_CDN_YEAR(2024, "redbullracing", "serper01"),
+  "GAS_AlphaTauri":   F1_CDN_YEAR(2022, "alphatauri",    "piegas01"),
+  "GAS_Alpine":       F1_CDN_YEAR(2025, "alpine",        "piegas01"),
+  "ALB_Red Bull":     F1_CDN_YEAR(2020, "redbullracing", "alealb01"),
+  "ALB_Williams":     F1_CDN_YEAR(2025, "williams",      "alealb01"),
+  "OCO_Alpine":       F1_CDN_YEAR(2024, "alpine",        "estoco01"),
+  "OCO_Haas":         F1_CDN_YEAR(2025, "haasf1team",    "estoco01"),
+  "BOT_Mercedes":     F1_CDN_YEAR(2021, "mercedes",      "valbot01"),
+  "BOT_Alfa Romeo":   F1_CDN_YEAR(2023, "alfaromeo",     "valbot01"),
+  "BOT_Sauber":       F1_CDN_YEAR(2025, "sauber",        "valbot01"),
+};
+
+/* Returns the CDN photo URL for a driver in a given season */
+const getDriverPhoto = (code, season) => {
+  const team = driverSeasonTeam(code, season);
+  return DRIVER_PHOTO_MAP[`${code}_${team}`] ?? null;
+};
+
+const DriverPhoto = ({ code, team: teamProp, season, size = 110, tall, style: extStyle }) => {
   const [imgErr, setImgErr] = useState(false);
   const [imgOk,  setImgOk]  = useState(false);
 
+  /* Season-aware team + photo */
+  const team   = driverSeasonTeam(code, season) ?? teamProp;
   const c      = tc(team);
   const h      = tall ? Math.round(size * 1.35) : size;
-  const imgSrc = DRIVER_IMAGES[code];
+  const imgSrc = getDriverPhoto(code, season) ?? DRIVER_PHOTO_MAP[`${code}_${teamProp}`] ?? null;
   const useImg = !!imgSrc && !imgErr;
+
+  /* Reset loading state whenever the photo source changes */
+  useEffect(() => { setImgErr(false); setImgOk(false); }, [imgSrc]);
 
   /* ── SVG helmet data (used as fallback) ── */
   const d = HELMET_DESIGNS[code] || {
@@ -791,10 +842,11 @@ const CircuitSVG = ({ circuit, size = 320, active = false }) => {
 ───────────────────────────────────────────────────────────── */
 const FilterBar = ({ selected, setSelected, season, setSeason, teamFilter, setTeamFilter }) => {
   const [q, setQ] = useState("");
-  const teams = [...new Set(DRIVERS.map(d => d.team))];
+  const ssnN = season !== "All" ? +season : null;
+  const teams = [...new Set(DRIVERS.map(d => driverSeasonTeam(d.code, ssnN)))];
   const vis = DRIVERS.filter(d =>
     (!q || d.name.toLowerCase().includes(q.toLowerCase()) || d.code.includes(q.toUpperCase())) &&
-    (!teamFilter || d.team === teamFilter)
+    (!teamFilter || driverSeasonTeam(d.code, ssnN) === teamFilter)
   );
 
   return (
@@ -847,7 +899,7 @@ const FilterBar = ({ selected, setSelected, season, setSeason, teamFilter, setTe
       {/* Driver pills */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {vis.map(d => {
-          const c = tc(d.team), on = selected.includes(d.code);
+          const c = tc(driverSeasonTeam(d.code, ssnN)), on = selected.includes(d.code);
           return (
             <button key={d.code}
               onClick={() => setSelected(p => p.includes(d.code) ? p.filter(x => x !== d.code) : [...p, d.code])}
@@ -887,7 +939,7 @@ async function callClaude(prompt) {
   return data.content?.find(b => b.type === "text")?.text || "No response received.";
 }
 
-function AIOracle() {
+function AIOracle({ season }) {
   const [tab, setTab] = useState("predictor");
 
   /* ── 1. Race Predictor ── */
@@ -1256,18 +1308,19 @@ Tone: formal but emotionally charged — this team wants to win. Be specific to 
           {/* Driver stat preview */}
           {(() => {
             const d = DRIVERS.find(x => x.code === scoutCode);
-            const c = tc(d.team);
+            const sTeam = driverSeasonTeam(d.code, season !== "All" ? +season : null);
+            const c = tc(sTeam);
             return (
               <div style={{ background: C.s1, borderRadius: 14, padding: 20, marginBottom: 20 }}>
                 <div style={{ display: "flex", gap: 18, marginBottom: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
                   {/* Photo */}
-                  <DriverPhoto code={d.code} team={d.team} size={100} tall />
+                  <DriverPhoto code={d.code} team={d.team} season={season} size={100} tall />
                   <div style={{ flex: 1, minWidth: 180 }}>
                     <div style={{ fontSize: 9, color: c, fontFamily: C.mono, letterSpacing: ".14em", marginBottom: 2 }}>#{d.num} · {d.nat}</div>
                     <div style={{ fontSize: 26, fontWeight: 900, color: c, fontFamily: C.disp, lineHeight: 1 }}>{d.code}</div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginTop: 3 }}>{d.name}</div>
                     <div style={{ display: "flex", gap: 7, marginTop: 8, flexWrap: "wrap" }}>
-                      <Pill label={d.team} color={c} sm />
+                      <Pill label={sTeam} color={c} sm />
                       <Pill label={`Age ${d.age}`} color={C.muted} sm />
                       <Pill label={`${totalWins(d)} wins`} color={C.gold} sm />
                       <Pill label={`${totalPts(d)} pts`} color={C.text} sm />
@@ -1375,7 +1428,7 @@ Tone: formal but emotionally charged — this team wants to win. Be specific to 
             {/* Driver status strip */}
             {radioDriverObj && (
               <div style={{ display: "flex", gap: 14, alignItems: "center", background: C.s1, borderRadius: 12, padding: "12px 16px", marginBottom: 18 }}>
-                <DriverPhoto code={radioDriverObj.code} team={radioDriverObj.team} size={54} tall />
+                <DriverPhoto code={radioDriverObj.code} team={radioDriverObj.team} season={season} size={54} tall />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: tc(radioDriverObj.team), fontFamily: C.disp }}>{radioDriverObj.code}</div>
                   <div style={{ fontSize: 11, color: C.dim, fontFamily: C.fn }}>{radioDriverObj.name} · {radioDriverObj.team}</div>
@@ -1533,16 +1586,17 @@ Tone: formal but emotionally charged — this team wants to win. Be specific to 
           {/* Driver preview */}
           {(() => {
             const d = DRIVERS.find(x => x.code === contractDriver);
-            const c = tc(d?.team);
+            const cTeam = driverSeasonTeam(contractDriver, season !== "All" ? +season : null);
+            const c = tc(cTeam);
             const yr = parseInt(contractSeason);
             return (
               <div style={{ display: "flex", gap: 16, background: C.s1, borderRadius: 14, padding: "16px 20px", marginBottom: 22, alignItems: "center", flexWrap: "wrap" }}>
-                <DriverPhoto code={d.code} team={d.team} size={72} tall />
+                <DriverPhoto code={d.code} team={d.team} season={season} size={72} tall />
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ fontSize: 22, fontWeight: 900, color: c, fontFamily: C.disp, lineHeight: 1 }}>{d.code}</div>
                   <div style={{ fontSize: 12, color: C.text, marginTop: 2 }}>{d.name}</div>
                   <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-                    <Pill label={d.team} color={c} sm />
+                    <Pill label={cTeam} color={c} sm />
                     <Pill label={`Age ${d.age}`} color={C.muted} sm />
                     <Pill label={`${d.pts[yr] || 0} pts in ${contractSeason}`} color={C.gold} sm />
                   </div>
@@ -1590,7 +1644,7 @@ Tone: formal but emotionally charged — this team wants to win. Be specific to 
           <div style={{ display: "flex", gap: 16, background: C.s1, borderRadius: 14, padding: "16px 20px", marginBottom: 22, alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ display: "flex", gap: 10 }}>
               {DRIVERS.filter(d => d.team === debriefTeam).slice(0, 2).map(d => (
-                <DriverPhoto key={d.code} code={d.code} team={d.team} size={62} tall />
+                <DriverPhoto key={d.code} code={d.code} team={d.team} season={season} size={62} tall />
               ))}
             </div>
             <div style={{ flex: 1, minWidth: 180 }}>
@@ -1626,7 +1680,7 @@ function DriverHub({ selected, setSelected, season, setSeason }) {
 
   const filtered = useMemo(() => {
     const list = selected.length ? DRIVERS.filter(d => selected.includes(d.code)) : DRIVERS;
-    return [...list].filter(d => !teamFilter || d.team === teamFilter).sort((a, b) => {
+    return [...list].filter(d => !teamFilter || driverSeasonTeam(d.code, season !== "All" ? +season : null) === teamFilter).sort((a, b) => {
       if (sortBy === "pts")   return sv(b, "pts", season) - sv(a, "pts", season);
       if (sortBy === "wins")  return sv(b, "wins", season) - sv(a, "wins", season);
       if (sortBy === "pace")  return b.pace - a.pace;
@@ -1706,7 +1760,8 @@ function DriverHub({ selected, setSelected, season, setSeason }) {
       {view === "grid" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(290px,1fr))", gap: 18 }}>
           {filtered.map((d, i) => {
-            const c = tc(d.team);
+            const sTeam = driverSeasonTeam(d.code, season !== "All" ? +season : null);
+            const c = tc(sTeam);
             const pts   = sv(d, "pts", season);
             const wins  = sv(d, "wins", season);
             const pods  = sv(d, "podiums", season);
@@ -1728,7 +1783,7 @@ function DriverHub({ selected, setSelected, season, setSeason }) {
                   }}>
                     {/* ── PHOTO HEADER ── */}
                     <div style={{ display: "flex", gap: 14, marginBottom: 14, alignItems: "flex-end" }}>
-                      <DriverPhoto code={d.code} team={d.team} size={88} tall />
+                      <DriverPhoto code={d.code} team={d.team} season={season} size={88} tall />
                       <div style={{ flex: 1, minWidth: 0, paddingBottom: 4 }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: c, fontFamily: C.mono,
                           letterSpacing: ".15em", marginBottom: 2 }}>#{d.num} · {d.nat}</div>
@@ -1736,7 +1791,7 @@ function DriverHub({ selected, setSelected, season, setSeason }) {
                         <div style={{ fontSize: 12, fontWeight: 500, color: C.text, marginTop: 3,
                           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</div>
                         <div style={{ display: "flex", gap: 4, marginTop: 7, flexWrap: "wrap" }}>
-                          <Pill label={d.team} color={c} sm />
+                          <Pill label={sTeam} color={c} sm />
                           <Pill label={`${d.age}y`} color={C.muted} sm />
                         </div>
                         <div style={{ marginTop: 10, textAlign: "left" }}>
@@ -1814,7 +1869,7 @@ function DriverHub({ selected, setSelected, season, setSeason }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr" }}>
                 {/* Driver A */}
                 <div style={{ display: "flex", gap: 16, padding: "20px 24px", background: `linear-gradient(135deg, ${cA}18, transparent)` }}>
-                  <DriverPhoto code={dA.code} team={dA.team} size={100} tall />
+                  <DriverPhoto code={dA.code} team={dA.team} season={season} size={100} tall />
                   <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", paddingBottom: 8 }}>
                     <div style={{ fontSize: 9, color: cA, fontFamily: C.mono, letterSpacing: ".14em" }}>#{dA.num} · {dA.nat}</div>
                     <div style={{ fontSize: 28, fontWeight: 900, color: cA, fontFamily: C.disp, lineHeight: 1 }}>{dA.code}</div>
@@ -1844,7 +1899,7 @@ function DriverHub({ selected, setSelected, season, setSeason }) {
                       <Pill label={dB.team} color={cB} sm />
                     </div>
                   </div>
-                  <DriverPhoto code={dB.code} team={dB.team} size={100} tall />
+                  <DriverPhoto code={dB.code} team={dB.team} season={season} size={100} tall />
                 </div>
               </div>
             </GCard>
@@ -1921,7 +1976,8 @@ function DriverHub({ selected, setSelected, season, setSeason }) {
             ))}
           </div>
           {filtered.map((d, i) => {
-            const c = tc(d.team);
+            const sTeam = driverSeasonTeam(d.code, season !== "All" ? +season : null);
+            const c = tc(sTeam);
             return (
               <div key={d.code} style={{
                 display: "grid", gap: 4,
@@ -1937,7 +1993,7 @@ function DriverHub({ selected, setSelected, season, setSeason }) {
                 </div>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{d.name}</div>
-                  <div style={{ fontSize: 9, color: c, fontFamily: C.mono, marginTop: 1 }}>{d.team}</div>
+                  <div style={{ fontSize: 9, color: c, fontFamily: C.mono, marginTop: 1 }}>{sTeam}</div>
                 </div>
                 <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
                   {[d.pace, d.craft, d.cons].map((v, j) => (
@@ -2063,7 +2119,7 @@ function StandingsPage({ selected, setSelected, season, setSeason }) {
 
   const filtered = useMemo(() => {
     const list = selected.length ? DRIVERS.filter(d => selected.includes(d.code)) : DRIVERS;
-    return [...list].filter(d => !teamFilter || d.team === teamFilter)
+    return [...list].filter(d => !teamFilter || driverSeasonTeam(d.code, season !== "All" ? +season : null) === teamFilter)
       .sort((a, b) => sv(b, field, season) - sv(a, field, season));
   }, [selected, season, metric, teamFilter, field]);
 
@@ -2087,7 +2143,8 @@ function StandingsPage({ selected, setSelected, season, setSeason }) {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {filtered.map((d, i) => {
-          const c = tc(d.team), val = sv(d, field, season);
+          const dTeam = driverSeasonTeam(d.code, season !== "All" ? +season : null);
+          const c = tc(dTeam), val = sv(d, field, season);
           return (
             <div key={d.code} style={{ animation: `cardIn .35s ease ${i * .035}s both` }}>
               <GCard accent={i === 0 ? C.gold : c} style={{ padding: "15px 22px" }}>
@@ -2102,7 +2159,7 @@ function StandingsPage({ selected, setSelected, season, setSeason }) {
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
                       <div>
                         <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{d.name}</span>
-                        <span style={{ fontSize: 10, color: c, fontFamily: C.mono, marginLeft: 10 }}>{d.team}</span>
+                        <span style={{ fontSize: 10, color: c, fontFamily: C.mono, marginLeft: 10 }}>{dTeam}</span>
                       </div>
                       <span style={{ fontSize: 22, fontWeight: 900, color: i === 0 ? C.gold : C.text, fontFamily: C.disp }}>{val.toLocaleString()}</span>
                     </div>
@@ -2134,8 +2191,9 @@ function TeamsPage({ season, setSeason }) {
   const teams = useMemo(() => {
     const grp = {};
     DRIVERS.forEach(d => {
-      if (!grp[d.team]) grp[d.team] = [];
-      grp[d.team].push(d);
+      const t = season !== "All" ? driverSeasonTeam(d.code, +season) : d.team;
+      if (!grp[t]) grp[t] = [];
+      grp[t].push(d);
     });
     return Object.entries(grp).map(([team, drivers]) => {
       const pts  = drivers.reduce((s, d) => s + sv(d, "pts", season), 0);
@@ -2946,7 +3004,7 @@ function AnalyticsPage({ season, setSeason }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "stretch" }}>
                 {/* Driver A */}
                 <div style={{ display: "flex", gap: 16, padding: "22px 24px", alignItems: "flex-end" }}>
-                  <DriverPhoto code={dA.code} team={dA.team} size={90} tall />
+                  <DriverPhoto code={dA.code} team={dA.team} season={season} size={90} tall />
                   <div style={{ paddingBottom: 4 }}>
                     <div style={{ fontSize: 24, fontWeight: 900, color: cA_color, fontFamily: C.disp, lineHeight: 1 }}>{dA.code}</div>
                     <div style={{ fontSize: 11, color: C.text, marginTop: 3 }}>{dA.name}</div>
@@ -2979,7 +3037,7 @@ function AnalyticsPage({ season, setSeason }) {
                     <div style={{ fontSize: 48, fontWeight: 900, color: cB_color, fontFamily: C.disp, lineHeight: 1, marginTop: 10 }}>{winnerCount.b}</div>
                     <div style={{ fontSize: 9, color: C.muted, fontFamily: C.mono }}>METRICS WON</div>
                   </div>
-                  <DriverPhoto code={dB.code} team={dB.team} size={90} tall />
+                  <DriverPhoto code={dB.code} team={dB.team} season={season} size={90} tall />
                 </div>
               </div>
             </GCard>
@@ -4149,7 +4207,7 @@ function GamesPage({ season, setSeason }) {
                 <CircuitSVG circuit={lapCircuit} size={280} active={lapPhase !== "idle"} />
               </div>
               <div style={{ flex: "0 0 auto" }}>
-                <DriverPhoto code={lapDriver} team={driverObj?.team} size={130} tall />
+                <DriverPhoto code={lapDriver} team={driverObj?.team} season={season} size={130} tall />
                 <div style={{ textAlign: "center", marginTop: 8 }}>
                   <div style={{ fontSize: 16, fontWeight: 900, color: tc(driverObj?.team), fontFamily: C.disp }}>{lapDriver}</div>
                   <div style={{ fontSize: 10, color: C.muted, fontFamily: C.fn }}>{driverObj?.name}</div>
@@ -4370,7 +4428,7 @@ export default function App({ user, onLogout }) {
   }, []);
 
   const pages = {
-    oracle:    <AIOracle />,
+    oracle:    <AIOracle season={season} />,
     hub:       <DriverHub selected={selected} setSelected={setSelected} season={season} setSeason={setSeason} />,
     analytics: <AnalyticsPage season={season} setSeason={setSeason} />,
     games:     <GamesPage season={season} setSeason={setSeason} />,
